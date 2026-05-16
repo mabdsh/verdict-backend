@@ -1,0 +1,1800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Verdict admin dashboard — internal operator console.">
+<meta name="theme-color" content="#0F1F15">
+<meta name="robots" content="noindex, nofollow">
+<title>Verdict Admin</title>
+<!--
+  Inline-SVG favicon — same green-circle logo as the sidebar / login screen.
+  Data URI keeps it as a single-file panel with zero extra HTTP requests.
+-->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='9' fill='%23163526'/><circle cx='16' cy='16' r='9.5' fill='none' stroke='%236EE7B7' stroke-width='1.8'/><circle cx='18.5' cy='13.5' r='3.5' fill='%23059669'/></svg>">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --sidebar:#0F1F15;--sidebar-hover:#163526;--sidebar-active:#1F4A35;--sidebar-border:#163526;
+  --bg:#f1f5f9;--surface:#fff;--surface-2:#f8fafc;
+  --border:#e2e8f0;--border-2:#cbd5e1;
+  --ink:#0A1A12;--ink-2:#3B5247;--ink-3:#6B8A7B;
+  --blue:#059669;--blue-l:#ECFDF5;--blue-b:#A7F3D0;
+  --green:#16a34a;--green-l:#f0fdf4;--green-b:#86efac;
+  --amber:#d97706;--amber-l:#fffbeb;--amber-b:#fcd34d;
+  --red:#dc2626;--red-l:#fef2f2;--red-b:#fca5a5;
+  --purple:#7c3aed;--purple-l:#f5f3ff;
+  --cyan:#0891b2;--cyan-l:#ecfeff;
+  --font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --mono:'SF Mono','Fira Code',monospace;
+  --r:8px;--r-lg:12px;
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 4px 12px rgba(0,0,0,.05);
+  --shadow-lg:0 8px 24px rgba(0,0,0,.10);
+}
+html,body{height:100%;font-family:var(--font);font-size:13.5px;color:var(--ink);background:var(--bg);line-height:1.55}
+
+/* ── Login ─────────────────────────────────────────────────────── */
+#login{position:fixed;inset:0;background:var(--sidebar);display:flex;align-items:center;justify-content:center;z-index:100}
+.login-card{background:var(--surface);border-radius:16px;padding:40px;width:360px;box-shadow:var(--shadow-lg)}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px}
+.login-logo svg{flex-shrink:0}
+.login-logo-text{font-size:20px;font-weight:800;letter-spacing:-.4px}
+.login-logo-sub{font-size:11px;color:var(--ink-3);font-weight:500;letter-spacing:.04em;text-transform:uppercase}
+.login-field{margin-bottom:16px}
+.login-field label{display:block;font-size:11px;font-weight:700;color:var(--ink-2);margin-bottom:6px;letter-spacing:.04em;text-transform:uppercase}
+.login-inp{width:100%;height:40px;padding:0 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13.5px;font-family:var(--mono);outline:none;transition:border .15s,box-shadow .15s;background:var(--surface)}
+.login-inp:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(5,150,105,.12)}
+.login-btn{width:100%;height:40px;background:var(--blue);color:#fff;border:none;border-radius:var(--r);font-size:13.5px;font-weight:700;cursor:pointer;transition:background .14s;margin-top:4px}
+.login-btn:hover{background:#047857}
+.login-err{font-size:12px;color:var(--red);margin-top:10px;text-align:center;min-height:18px}
+.login-card.shake{animation:shake .4s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+
+/* ── App layout ────────────────────────────────────────────────── */
+.hidden{display:none!important}
+#app{display:flex;height:100vh;overflow:hidden}
+
+/* ── Sidebar ───────────────────────────────────────────────────── */
+.sidebar{width:220px;flex-shrink:0;background:var(--sidebar);display:flex;flex-direction:column;border-right:1px solid var(--sidebar-border)}
+.sb-logo{padding:18px 16px 14px;border-bottom:1px solid var(--sidebar-border)}
+.sb-logo-wrap{display:flex;align-items:center;gap:9px}
+.sb-logo-text{color:#fff;font-size:16px;font-weight:800;letter-spacing:-.3px}
+.sb-logo-badge{background:#163526;color:var(--ink-3);font-size:10px;font-weight:700;padding:2px 6px;border-radius:99px;letter-spacing:.04em}
+.sb-nav{flex:1;padding:10px 8px;display:flex;flex-direction:column;gap:2px}
+.sb-section{font-size:10px;font-weight:700;color:#475569;letter-spacing:.08em;text-transform:uppercase;padding:12px 8px 4px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;cursor:pointer;color:#94a3b8;font-weight:500;font-size:13px;transition:background .12s,color .12s;user-select:none}
+.nav-item:hover{background:var(--sidebar-hover);color:#e2e8f0}
+.nav-item.active{background:var(--sidebar-active);color:#fff}
+.nav-item svg{flex-shrink:0;opacity:.7}
+.nav-item.active svg{opacity:1}
+.sb-footer{padding:12px 16px;border-top:1px solid var(--sidebar-border)}
+.sb-status{display:flex;align-items:center;gap:7px;font-size:11.5px;color:#64748b;margin-bottom:10px}
+.sb-dot{width:7px;height:7px;border-radius:50%;background:#16a34a;flex-shrink:0}
+.sb-dot.err{background:var(--red)}
+.sb-logout{width:100%;height:32px;background:transparent;border:1px solid #163526;border-radius:6px;color:#94a3b8;font-size:12px;font-family:var(--font);cursor:pointer;transition:all .12s}
+.sb-logout:hover{background:#163526;color:#e2e8f0}
+
+/* ── Main ──────────────────────────────────────────────────────── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+
+/* ── Topbar ────────────────────────────────────────────────────── */
+.topbar{height:56px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;gap:16px}
+.topbar-left{display:flex;align-items:center;gap:16px}
+.topbar-title{font-size:17px;font-weight:700;letter-spacing:-.25px}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.refresh-info{font-size:12px;color:var(--ink-3);text-align:right}
+.last-updated{display:block;font-weight:500}
+.countdown{display:block;font-size:11px}
+.btn{height:32px;padding:0 14px;border-radius:6px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all .12s;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border)}
+.btn-refresh{background:var(--surface-2);color:var(--ink-2)}
+.btn-refresh:hover{background:var(--border);color:var(--ink)}
+.btn-primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-primary:hover{background:#047857}
+.btn-danger{background:var(--red-l);color:var(--red);border-color:var(--red-b)}
+.btn-danger:hover{background:var(--red);color:#fff;border-color:var(--red)}
+
+/* ── Content area ──────────────────────────────────────────────── */
+.content{flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:20px}
+.view{display:flex;flex-direction:column;gap:20px}
+
+/* ── KPI cards ─────────────────────────────────────────────────── */
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+.kpi-card{background:var(--surface);border-radius:var(--r-lg);padding:18px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:4px;border:1px solid var(--border);position:relative;overflow:hidden}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.kpi-blue::before{background:var(--blue)}
+.kpi-green::before{background:var(--green)}
+.kpi-purple::before{background:var(--purple)}
+.kpi-amber::before{background:var(--amber)}
+.kpi-red::before{background:var(--red)}
+.kpi-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:8px}
+.kpi-blue .kpi-icon{background:var(--blue-l);color:var(--blue)}
+.kpi-green .kpi-icon{background:var(--green-l);color:var(--green)}
+.kpi-purple .kpi-icon{background:var(--purple-l);color:var(--purple)}
+.kpi-amber .kpi-icon{background:var(--amber-l);color:var(--amber)}
+.kpi-red .kpi-icon{background:var(--red-l);color:var(--red)}
+.kpi-value{font-size:26px;font-weight:800;letter-spacing:-.5px;line-height:1.1}
+.kpi-label{font-size:11.5px;font-weight:600;color:var(--ink-2)}
+.kpi-sub{font-size:11px;color:var(--ink-3);margin-top:2px}
+
+/* ── Charts row ─────────────────────────────────────────────────── */
+.charts-row{display:grid;grid-template-columns:1fr 320px;gap:14px}
+.chart-card{background:var(--surface);border-radius:var(--r-lg);border:1px solid var(--border);box-shadow:var(--shadow);overflow:hidden}
+.chart-card.full{grid-column:1/-1}
+.chart-hdr{padding:16px 18px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.chart-title{font-size:13px;font-weight:700;color:var(--ink)}
+.chart-sub{font-size:11px;color:var(--ink-3)}
+.chart-body{padding:16px 18px;position:relative}
+.chart-body canvas{max-height:240px}
+.chart-body.tall canvas{max-height:300px}
+
+/* ── Donut legend ───────────────────────────────────────────────── */
+.donut-legend{padding:0 18px 16px;display:flex;flex-direction:column;gap:8px}
+.legend-item{display:flex;align-items:center;justify-content:space-between}
+.legend-left{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-2)}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.legend-val{font-size:12.5px;font-weight:700;color:var(--ink)}
+
+/* ── Period tabs ────────────────────────────────────────────────── */
+.period-tabs{display:flex;gap:4px;background:var(--surface-2);padding:3px;border-radius:8px;border:1px solid var(--border)}
+.period-btn{height:28px;padding:0 14px;border-radius:6px;border:none;background:transparent;color:var(--ink-3);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all .12s}
+.period-btn.active{background:var(--surface);color:var(--blue);box-shadow:var(--shadow)}
+
+/* ── Analytics bottom ───────────────────────────────────────────── */
+.analytics-bottom{display:grid;grid-template-columns:280px 1fr;gap:14px}
+
+/* ── Tables ─────────────────────────────────────────────────────── */
+.table-card{background:var(--surface);border-radius:var(--r-lg);border:1px solid var(--border);box-shadow:var(--shadow);overflow:hidden}
+.table-hdr{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.table-title{font-size:13px;font-weight:700}
+.table-count{font-size:12px;color:var(--ink-3);font-weight:500}
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.tbl th{padding:9px 14px;text-align:left;font-size:10.5px;font-weight:700;color:var(--ink-3);letter-spacing:.06em;text-transform:uppercase;background:var(--surface-2);border-bottom:1px solid var(--border);white-space:nowrap}
+.tbl td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--ink);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:var(--surface-2)}
+.tbl-mono{font-family:var(--mono);font-size:11.5px}
+.tbl-dim{color:var(--ink-3)}
+
+/* ── Status badges ──────────────────────────────────────────────── */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700;white-space:nowrap}
+.badge-green{background:var(--green-l);color:#14532d;border:1px solid var(--green-b)}
+.badge-amber{background:var(--amber-l);color:#713f12;border:1px solid var(--amber-b)}
+.badge-red{background:var(--red-l);color:#7f1d1d;border:1px solid var(--red-b)}
+.badge-gray{background:var(--surface-2);color:var(--ink-3);border:1px solid var(--border)}
+.badge-blue{background:var(--blue-l);color:#047857;border:1px solid var(--blue-b)}
+
+/* ── Filter bar ─────────────────────────────────────────────────── */
+.filter-bar{background:var(--surface);border-radius:var(--r-lg);border:1px solid var(--border);box-shadow:var(--shadow);padding:14px 18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.filter-label{font-size:11.5px;font-weight:600;color:var(--ink-2)}
+.filter-sel{height:32px;padding:0 10px;border:1px solid var(--border);border-radius:6px;font-size:12.5px;color:var(--ink);background:var(--surface);outline:none;cursor:pointer;font-family:var(--font)}
+.filter-sel:focus{border-color:var(--blue)}
+.filter-spacer{flex:1}
+
+/* ── Pagination ─────────────────────────────────────────────────── */
+.pagination{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-top:1px solid var(--border);background:var(--surface-2)}
+.pg-info{font-size:12px;color:var(--ink-3)}
+.pg-btns{display:flex;gap:6px}
+.pg-btn{height:30px;padding:0 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--ink-2);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all .12s}
+.pg-btn:hover:not(:disabled){background:var(--border)}
+.pg-btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ── Copy btn ───────────────────────────────────────────────────── */
+.copy-btn{background:none;border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:10px;color:var(--ink-3);cursor:pointer;font-family:var(--font);transition:all .12s;margin-left:4px}
+.copy-btn:hover{background:var(--border);color:var(--ink)}
+
+/* ── Empty & loading states ─────────────────────────────────────── */
+.empty{padding:40px;text-align:center;color:var(--ink-3);font-size:13px}
+.empty svg{margin-bottom:12px;opacity:.3}
+.shimmer{background:linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 50%,#f1f5f9 75%);background-size:200%;animation:shimmer 1.4s infinite;border-radius:6px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skeleton{height:14px;margin:4px 0}
+
+/* ── Error row ──────────────────────────────────────────────────── */
+.error-cell{color:var(--red);font-size:11px;font-family:var(--mono);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ── Recent errors section ──────────────────────────────────────── */
+.errors-section{background:var(--surface);border-radius:var(--r-lg);border:1px solid var(--red-b);box-shadow:var(--shadow)}
+.errors-hdr{padding:14px 18px;border-bottom:1px solid var(--red-b);display:flex;align-items:center;gap:8px}
+.errors-dot{width:8px;height:8px;border-radius:50%;background:var(--red);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── Toast ──────────────────────────────────────────────────────── */
+#toast{position:fixed;bottom:20px;right:20px;background:#0F1F15;color:#e2e8f0;padding:10px 16px;border-radius:8px;font-size:12.5px;font-weight:500;box-shadow:var(--shadow-lg);transition:opacity .3s,transform .3s;opacity:0;transform:translateY(8px);pointer-events:none;z-index:200}
+#toast.show{opacity:1;transform:translateY(0)}
+
+/* ── Topbar paywall pill ────────────────────────────────────────── */
+.topbar-paywall{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:600;background:var(--surface-2);color:var(--ink-2);border:1px solid var(--border)}
+.topbar-paywall.on  {background:var(--green-l);color:#14532d;border-color:var(--green-b)}
+.topbar-paywall.off {background:var(--amber-l);color:#713f12;border-color:var(--amber-b)}
+.topbar-paywall-dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.8}
+
+/* ── API health banner ──────────────────────────────────────────── */
+.api-banner{padding:10px 24px;background:var(--red-l);color:var(--red);border-bottom:1px solid var(--red-b);font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:10px}
+.api-banner svg{flex-shrink:0}
+
+/* ── Metric tooltip (the ? icon next to chart titles) ───────────── */
+.metric-help{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--surface-2);border:1px solid var(--border);color:var(--ink-3);font-size:9px;font-weight:700;cursor:help;margin-left:6px;vertical-align:middle;position:relative;transition:all .12s}
+.metric-help:hover{background:var(--blue-l);border-color:var(--blue-b);color:var(--blue)}
+.metric-help::before{content:attr(data-tip);position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:#0F1F15;color:#e2e8f0;padding:8px 12px;border-radius:6px;font-size:11.5px;font-weight:400;line-height:1.5;width:max-content;max-width:280px;white-space:normal;text-align:left;box-shadow:var(--shadow-lg);opacity:0;pointer-events:none;transition:opacity .15s;z-index:50}
+.metric-help::after{content:'';position:absolute;bottom:calc(100% + 2px);left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:#0F1F15;opacity:0;pointer-events:none;transition:opacity .15s;z-index:50}
+.metric-help:hover::before,.metric-help:hover::after{opacity:1}
+
+/* ── Modal (help dialog) ────────────────────────────────────────── */
+.modal-overlay{position:fixed;inset:0;background:rgba(15,31,21,.6);display:flex;align-items:center;justify-content:center;z-index:150;padding:20px;backdrop-filter:blur(2px)}
+.modal-card{background:var(--surface);border-radius:14px;box-shadow:var(--shadow-lg);width:100%;max-width:380px;overflow:hidden}
+.modal-hdr{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:15px;font-weight:700;letter-spacing:-.2px}
+.modal-close{background:none;border:none;font-size:22px;line-height:1;color:var(--ink-3);cursor:pointer;padding:0;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:4px;transition:all .12s}
+.modal-close:hover{background:var(--surface-2);color:var(--ink)}
+.modal-body{padding:18px 22px 22px;display:flex;flex-direction:column;gap:9px}
+.kbd-row{display:flex;align-items:center;gap:14px;font-size:12.5px;color:var(--ink-2)}
+.kbd-row kbd{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ink);background:var(--surface-2);border:1px solid var(--border-2);border-bottom-width:2px;padding:2px 8px;border-radius:4px;min-width:30px;text-align:center}
+.kbd-sep{height:1px;background:var(--border);margin:4px 0}
+
+/* ── Better empty states ────────────────────────────────────────── */
+.empty-rich{padding:48px 24px;text-align:center}
+.empty-rich .empty-icon{width:48px;height:48px;border-radius:50%;background:var(--surface-2);display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px;color:var(--ink-3)}
+.empty-rich .empty-title{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:6px}
+.empty-rich .empty-desc{font-size:12.5px;color:var(--ink-3);max-width:340px;margin:0 auto;line-height:1.55}
+
+/* ── Devices summary ────────────────────────────────────────────── */
+.summary-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.summary-card{background:var(--surface);border-radius:var(--r-lg);border:1px solid var(--border);box-shadow:var(--shadow);padding:16px 18px}
+.summary-val{font-size:22px;font-weight:800;letter-spacing:-.4px}
+.summary-label{font-size:12px;color:var(--ink-3);margin-top:2px}
+
+/* ── Responsive ─────────────────────────────────────────────────── */
+@media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(3,1fr)}.charts-row{grid-template-columns:1fr}.analytics-bottom{grid-template-columns:1fr}}
+@media(max-width:800px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<!-- ── Login ────────────────────────────────────────────────────── -->
+<div id="login">
+  <div class="login-card" id="login-card">
+    <div class="login-logo">
+      <svg viewBox="0 0 32 32" fill="none" width="36" height="36">
+        <rect width="32" height="32" rx="9" fill="#163526"/>
+        <circle cx="16" cy="16" r="9.5" fill="none" stroke="#6EE7B7" stroke-width="1.8"/>
+        <circle cx="18.5" cy="13.5" r="3.5" fill="#059669"/>
+      </svg>
+      <div>
+        <div class="login-logo-text">Verdict</div>
+        <div class="login-logo-sub">Admin Dashboard</div>
+      </div>
+    </div>
+    <div class="login-field">
+      <label for="secret-inp">Admin Secret</label>
+      <input id="secret-inp" type="password" class="login-inp" placeholder="Enter your ADMIN_SECRET" autocomplete="current-password">
+    </div>
+    <button class="login-btn" onclick="tryLogin()">Sign in</button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
+
+<!-- ── App ──────────────────────────────────────────────────────── -->
+<div id="app" class="hidden">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sb-logo">
+      <div class="sb-logo-wrap">
+        <svg viewBox="0 0 22 22" fill="none" width="24" height="24">
+          <circle cx="11" cy="11" r="8.5" fill="none" stroke="#6EE7B7" stroke-width="1.5"/>
+          <circle cx="13" cy="9" r="3.2" fill="#059669"/>
+        </svg>
+        <div>
+          <div class="sb-logo-text">Verdict</div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="sb-nav">
+      <div class="sb-section">Dashboard</div>
+      <div class="nav-item active" data-view="overview" onclick="navigate('overview')">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Overview
+      </div>
+      <div class="nav-item" data-view="analytics" onclick="navigate('analytics')">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Analytics
+      </div>
+      <div class="sb-section">Data</div>
+      <div class="nav-item" data-view="logs" onclick="navigate('logs')">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        Request Logs
+      </div>
+      <div class="nav-item" data-view="devices" onclick="navigate('devices')">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        Devices
+      </div>
+      <div class="nav-item" data-view="subscriptions" onclick="navigate('subscriptions')">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        Subscriptions
+      </div>
+      <div class="nav-item" data-view="webhooks" onclick="navigate('webhooks')">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+        Webhooks
+      </div>
+    </nav>
+
+    <div class="sb-footer">
+      <div class="sb-status">
+        <div class="sb-dot" id="status-dot"></div>
+        <span id="status-text">Connecting…</span>
+      </div>
+      <button class="sb-logout" onclick="logout()">Sign out</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-title" id="page-title">Overview</div>
+        <div class="topbar-paywall" id="topbar-paywall" style="display:none">
+          <span class="topbar-paywall-dot"></span>
+          <span id="topbar-paywall-label">Paywall: …</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="refresh-info">
+          <span class="last-updated" id="last-updated">—</span>
+          <span class="countdown" id="countdown"></span>
+        </div>
+        <button class="btn btn-refresh" id="autoRefreshBtn" onclick="toggleAutoRefresh()" title="Pause or resume the 30-second auto-refresh (P)">
+          <svg id="autoRefreshIcon" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+          <span id="autoRefreshLabel">Pause</span>
+        </button>
+        <button class="btn btn-refresh" onclick="manualRefresh()" title="Refresh current view (R)">
+          <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+          Refresh
+        </button>
+        <button class="btn btn-refresh" onclick="showHelp()" title="Keyboard shortcuts (?)" style="padding:0 10px">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- API health banner — appears across the top of content when reachability fails. -->
+    <div id="api-banner" class="api-banner hidden"></div>
+
+    <!-- Content -->
+    <div class="content">
+
+      <!-- Overview -->
+      <div id="view-overview" class="view">
+        <div class="kpi-grid" id="kpi-cards"></div>
+        <div class="charts-row">
+          <div class="chart-card">
+            <div class="chart-hdr">
+              <div>
+                <div class="chart-title">API activity</div>
+                <div class="chart-sub">Total calls per day · last 7 days</div>
+              </div>
+            </div>
+            <div class="chart-body"><canvas id="activityChart"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-hdr">
+              <div>
+                <div class="chart-title">Today's breakdown</div>
+                <div class="chart-sub">Calls by endpoint type</div>
+              </div>
+            </div>
+            <div class="chart-body" style="padding-bottom:8px"><canvas id="donutChart" style="max-height:180px"></canvas></div>
+            <div class="donut-legend" id="donut-legend"></div>
+          </div>
+        </div>
+        <div id="recent-errors"></div>
+      </div>
+
+      <!-- Analytics -->
+      <div id="view-analytics" class="view hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div class="period-tabs" id="period-tabs">
+            <button class="period-btn active" data-days="7" onclick="setPeriod(7,this)">7 days</button>
+            <button class="period-btn" data-days="14" onclick="setPeriod(14,this)">14 days</button>
+            <button class="period-btn" data-days="30" onclick="setPeriod(30,this)">30 days</button>
+          </div>
+        </div>
+        <div class="chart-card full">
+          <div class="chart-hdr">
+            <div>
+              <div class="chart-title">Calls over time by type</div>
+              <div class="chart-sub" id="analytics-sub">Score · Analyze · Parse</div>
+            </div>
+          </div>
+          <div class="chart-body tall"><canvas id="analyticsChart"></canvas></div>
+        </div>
+        <div class="chart-card full">
+          <div class="chart-hdr">
+            <div>
+              <div class="chart-title">API latency
+                <span class="metric-help" data-tip="Average and p99 latency in milliseconds across successful (status 200) requests. Excludes 4xx/5xx because deliberately-fast 401s would skew the average downward.">?</span>
+              </div>
+              <div class="chart-sub" id="latency-sub">Average + max response time over the period</div>
+            </div>
+          </div>
+          <div class="chart-body tall"><canvas id="latencyChart"></canvas></div>
+        </div>
+        <div class="analytics-bottom">
+          <div class="chart-card">
+            <div class="chart-hdr"><div class="chart-title">Endpoint split</div></div>
+            <div class="chart-body" style="padding-bottom:8px"><canvas id="analyticsDonut" style="max-height:180px"></canvas></div>
+            <div class="donut-legend" id="analytics-legend"></div>
+          </div>
+          <div class="table-card">
+            <div class="table-hdr">
+              <div class="table-title">Top devices</div>
+              <div class="table-count" id="top-devices-count"></div>
+            </div>
+            <div id="top-devices-table"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Webhooks -->
+      <div id="view-webhooks" class="view hidden">
+        <div class="kpi-grid" id="webhook-kpi-cards"></div>
+        <div class="charts-row">
+          <div class="chart-card">
+            <div class="chart-hdr">
+              <div>
+                <div class="chart-title">Event types
+                  <span class="metric-help" data-tip="Distribution of webhook events received in the last 30 days. subscription_updated typically dominates because LemonSqueezy fires it for routine state changes (renewals, plan updates, payment retries).">?</span>
+                </div>
+                <div class="chart-sub">Last 30 days</div>
+              </div>
+            </div>
+            <div class="chart-body" style="padding-bottom:8px"><canvas id="webhookDonut" style="max-height:180px"></canvas></div>
+            <div class="donut-legend" id="webhook-legend"></div>
+          </div>
+          <div class="table-card">
+            <div class="table-hdr">
+              <div class="table-title">Recent webhooks</div>
+              <div class="table-count" id="webhook-count"></div>
+            </div>
+            <div id="webhook-table"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Logs -->
+      <div id="view-logs" class="view hidden">
+        <div class="filter-bar">
+          <span class="filter-label">Endpoint</span>
+          <select class="filter-sel" id="log-endpoint">
+            <option value="">All endpoints</option>
+            <option value="/api/score/batch">Score batch</option>
+            <option value="/api/analyze/job">Analyze job</option>
+            <option value="/api/profile/parse">Parse profile</option>
+          </select>
+          <span class="filter-label">Status</span>
+          <select class="filter-sel" id="log-status">
+            <option value="">All</option>
+            <option value="errors">Errors only (4xx/5xx)</option>
+          </select>
+          <span class="filter-label">Limit</span>
+          <select class="filter-sel" id="log-limit">
+            <option value="50">50</option>
+            <option value="100" selected>100</option>
+            <option value="200">200</option>
+            <option value="500">500</option>
+          </select>
+          <div class="filter-spacer"></div>
+          <button class="btn btn-primary" onclick="fetchAndRenderLogs()">Apply filters</button>
+          <button class="btn btn-refresh" onclick="exportLogsCsv()" title="Download currently-loaded log rows as CSV">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export
+          </button>
+          <button class="btn btn-danger"  onclick="clearAllLogs()">Clear logs</button>
+        </div>
+        <div class="table-card">
+          <div class="table-hdr">
+            <div class="table-title">Request logs</div>
+            <div class="table-count" id="logs-count"></div>
+          </div>
+          <div id="logs-table"></div>
+          <div id="log-pagination"></div>
+        </div>
+      </div>
+
+      <!-- Devices -->
+      <div id="view-devices" class="view hidden">
+        <div class="summary-row" id="devices-summary"></div>
+        <div class="table-card">
+          <div class="table-hdr">
+            <div class="table-title">All devices</div>
+            <div class="table-count" id="devices-count"></div>
+          </div>
+          <div id="devices-table"></div>
+        </div>
+      </div>
+
+      <!-- Subscriptions -->
+      <div id="view-subscriptions" class="view hidden">
+        <div class="kpi-grid" id="sub-kpi-cards"></div>
+        <div class="charts-row">
+          <div class="table-card" style="flex:1">
+            <div class="table-hdr">
+              <div class="table-title">Subscriber devices</div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <input id="subSearchInp" class="filter-sel" style="width:220px" placeholder="Search by email or device ID…" oninput="subSearch(this.value)">
+                <div class="table-count" id="sub-devices-count"></div>
+              </div>
+            </div>
+            <div id="sub-devices-table"></div>
+          </div>
+          <div class="chart-card" style="width:280px;flex-shrink:0">
+            <div class="chart-hdr"><div class="chart-title">Paywall toggle</div></div>
+            <div class="chart-body" style="display:flex;flex-direction:column;gap:16px;padding:20px 18px">
+              <div id="toggleCard" style="padding:16px;border-radius:10px;border:1px solid var(--border);background:var(--surface-2)">
+                <div style="font-size:13px;font-weight:600;margin-bottom:4px" id="toggleTitle">Loading…</div>
+                <div style="font-size:11.5px;color:var(--ink-2);margin-bottom:14px" id="toggleDesc"></div>
+                <button id="toggleBtn" onclick="toggleSubscriptions()" style="width:100%;height:36px;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s">Toggle</button>
+              </div>
+              <div style="font-size:11px;color:var(--ink-3);line-height:1.55;padding:10px 12px;background:var(--surface-2);border-radius:8px;border:1px solid var(--border)">
+                <strong>When OFF:</strong> everyone gets Pro limits — no paywall.<br><br>
+                <strong>When ON:</strong> free tier enforced for non-subscribers.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<div id="toast"></div>
+
+<!-- ── Help modal ─────────────────────────────────────────────────────── -->
+<div id="help-modal" class="modal-overlay hidden" onclick="hideHelp(event)">
+  <div class="modal-card" onclick="event.stopPropagation()">
+    <div class="modal-hdr">
+      <div class="modal-title">Keyboard shortcuts</div>
+      <button class="modal-close" onclick="hideHelp()" aria-label="Close">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="kbd-row"><kbd>1</kbd><span>Overview</span></div>
+      <div class="kbd-row"><kbd>2</kbd><span>Analytics</span></div>
+      <div class="kbd-row"><kbd>3</kbd><span>Request logs</span></div>
+      <div class="kbd-row"><kbd>4</kbd><span>Devices</span></div>
+      <div class="kbd-row"><kbd>5</kbd><span>Subscriptions</span></div>
+      <div class="kbd-row"><kbd>6</kbd><span>Webhooks</span></div>
+      <div class="kbd-sep"></div>
+      <div class="kbd-row"><kbd>R</kbd><span>Refresh current view</span></div>
+      <div class="kbd-row"><kbd>P</kbd><span>Pause / resume auto-refresh</span></div>
+      <div class="kbd-row"><kbd>/</kbd><span>Focus search (on Subscriptions / Devices)</span></div>
+      <div class="kbd-row"><kbd>?</kbd><span>Show this help</span></div>
+      <div class="kbd-row"><kbd>Esc</kbd><span>Close dialogs</span></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+'use strict';
+
+// ── State ──────────────────────────────────────────────────────────────────────
+let secret = '';
+let currentView = 'overview';
+let analyticsDays = 7;
+let charts = {};
+let refreshInterval = null;
+let countdownSecs = 30;
+let countdownTick = null;
+let allLogs = [];
+let logsPage = 0;
+const LOGS_PER_PAGE = 25;
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+function fmt(n) {
+  if (n == null) return '—';
+  if (n >= 1000000) return (n/1000000).toFixed(1) + 'M';
+  if (n >= 1000)    return (n/1000).toFixed(n >= 10000 ? 0 : 1) + 'K';
+  return String(n);
+}
+function fmtMs(ms) {
+  if (ms == null || ms === 0) return '—';
+  if (ms >= 1000) return (ms/1000).toFixed(2) + 's';
+  return ms + ' ms';
+}
+function fmtDate(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('en-US', { month:'short', day:'numeric' });
+}
+function timeAgo(iso) {
+  if (!iso) return '—';
+  const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (diff < 60)   return Math.round(diff) + 's ago';
+  if (diff < 3600) return Math.round(diff/60) + 'm ago';
+  if (diff < 86400) return Math.round(diff/3600) + 'h ago';
+  return Math.round(diff/86400) + 'd ago';
+}
+function truncId(id) {
+  if (!id) return '—';
+  return id.substring(0,8) + '…';
+}
+function statusBadge(status) {
+  if (status >= 500) return `<span class="badge badge-red">${status}</span>`;
+  if (status >= 400) return `<span class="badge badge-amber">${status}</span>`;
+  if (status >= 200) return `<span class="badge badge-green">${status}</span>`;
+  return `<span class="badge badge-gray">${status}</span>`;
+}
+function endpointBadge(ep) {
+  if (!ep) return '—';
+  const map = { '/api/score/batch':'Score', '/api/analyze/job':'Analyze', '/api/profile/parse':'Parse' };
+  const label = map[ep] || ep;
+  const cls = ep.includes('score') ? 'badge-blue' : ep.includes('analyze') ? 'badge badge-gray' : 'badge-gray';
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+
+// ── API ────────────────────────────────────────────────────────────────────────
+async function api(path) {
+  const res = await fetch(path, { headers: { 'X-Admin-Secret': secret } });
+
+  // 403 / 401 = bad secret. Log out so operator re-authenticates.
+  if (res.status === 401 || res.status === 403) {
+    logout();
+    throw new Error('forbidden');
+  }
+
+  // 429 = either edge rate limit or admin two-tier lockout. Don't log out —
+  // operator may have a valid secret but be locked out from previous wrong
+  // attempts, or the IP may have hit the per-minute cap on /admin/* under
+  // heavy refresh. Surface the backend's message so they know the countdown.
+  if (res.status === 429) {
+    let msg = 'Rate-limited — wait before retrying.';
+    try {
+      const data = await res.json();
+      if (data.message) msg = data.message;
+    } catch (_) {}
+    showToast(msg);
+    throw new Error('rate_limited');
+  }
+
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+// ── Auth ───────────────────────────────────────────────────────────────────────
+async function tryLogin() {
+  const inp = document.getElementById('secret-inp');
+  const err = document.getElementById('login-err');
+  const val = inp.value.trim();
+  if (!val) { err.textContent = 'Please enter your admin secret.'; return; }
+  err.textContent = 'Checking…';
+  try {
+    const res = await fetch('/admin/stats', { headers: { 'X-Admin-Secret': val } });
+    if (!res.ok) {
+      // Read the structured error message from the backend.
+      // Falls back to a generic message if the response isn't JSON
+      // (e.g. a network-level 429 from Nginx before the app responds).
+      let msg = 'Incorrect secret — check your ADMIN_SECRET in .env';
+      try {
+        const data = await res.json();
+        if (data.message) msg = data.message;
+      } catch (_) {}
+      err.textContent = msg;
+      // Only shake on a wrong secret (403), not on lockout (429).
+      // A lockout message is informational — shaking it implies "try again",
+      // which is the opposite of what we want the user to do.
+      if (res.status !== 429) {
+        document.getElementById('login-card').classList.add('shake');
+        setTimeout(() => document.getElementById('login-card').classList.remove('shake'), 400);
+      }
+      return;
+    }
+    secret = val;
+    sessionStorage.setItem('verdict_admin_secret', val);
+    document.getElementById('login').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    setStatus(true);
+    navigate('overview');
+    startAutoRefresh();
+  } catch(e) {
+    err.textContent = 'Could not reach server — is the backend running?';
+  }
+}
+
+function logout() {
+  sessionStorage.removeItem('verdict_admin_secret');
+  secret = '';
+  stopAutoRefresh();
+  destroyCharts();
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('login').classList.remove('hidden');
+  document.getElementById('secret-inp').value = '';
+  document.getElementById('login-err').textContent = '';
+}
+
+// ── Navigation ─────────────────────────────────────────────────────────────────
+async function navigate(view) {
+  currentView = view;
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.view === view);
+  });
+  document.querySelectorAll('.view').forEach(el => el.classList.add('hidden'));
+  document.getElementById(`view-${view}`).classList.remove('hidden');
+  const titles = { overview:'Overview', analytics:'Analytics', logs:'Request Logs', devices:'Devices', subscriptions:'Subscriptions' };
+  document.getElementById('page-title').textContent = titles[view] || view;
+  destroyCharts();
+  await renderView(view);
+}
+
+async function renderView(view) {
+  try {
+    if (view === 'overview')  await renderOverview();
+    if (view === 'analytics') await renderAnalytics(analyticsDays);
+    if (view === 'logs')      await fetchAndRenderLogs();
+    if (view === 'devices')       await renderDevices();
+    if (view === 'subscriptions') await renderSubscriptions();
+    setLastUpdated();
+    setStatus(true);
+  } catch(e) {
+    console.error('Render error:', e);
+    setStatus(false);
+  }
+}
+
+// ── Overview ───────────────────────────────────────────────────────────────────
+async function renderOverview() {
+  const [stats, daily] = await Promise.all([
+    api('/admin/stats'),
+    api('/admin/daily?days=7')
+  ]);
+
+  // KPI cards
+  const ct = stats.calls_today;
+  const perf = stats.performance;
+  const devices = stats.devices;
+  const errColor = perf.errors_today > 0 ? 'kpi-red' : 'kpi-green';
+
+  document.getElementById('kpi-cards').innerHTML = `
+    <div class="kpi-card kpi-blue">
+      <div class="kpi-icon">${icons.users}</div>
+      <div class="kpi-value">${fmt(devices.total)}</div>
+      <div class="kpi-label">Total Devices</div>
+      <div class="kpi-sub">+${devices.new_today} new today · ${devices.active_today} active · ${devices.trial_now || 0} in trial</div>
+    </div>
+    <div class="kpi-card kpi-green">
+      <div class="kpi-icon">${icons.activity}</div>
+      <div class="kpi-value">${fmt(ct.total)}</div>
+      <div class="kpi-label">Calls Today</div>
+      <div class="kpi-sub">${ct.panel_opens || 0} panels opened · ${ct.profile} parsed · ${ct.scored} scored</div>
+    </div>
+    <div class="kpi-card kpi-purple">
+      <div class="kpi-icon">${icons.chart}</div>
+      <div class="kpi-value">${fmt(stats.calls_week.total)}</div>
+      <div class="kpi-label">Calls This Week</div>
+      <div class="kpi-sub">${fmt(stats.calls_week.scored)} scored · ${fmt(stats.calls_week.analyze)} analyzed</div>
+    </div>
+    <div class="kpi-card kpi-amber">
+      <div class="kpi-icon">${icons.clock}</div>
+      <div class="kpi-value">${fmtMs(perf.avg_latency_ms)}</div>
+      <div class="kpi-label">Avg Response</div>
+      <div class="kpi-sub">Max ${fmtMs(perf.max_latency_ms)} · ${perf.successful_requests_today} ok reqs today</div>
+    </div>
+    <div class="kpi-card ${errColor}">
+      <div class="kpi-icon">${icons.alert}</div>
+      <div class="kpi-value">${perf.errors_today}</div>
+      <div class="kpi-label">Errors Today</div>
+      <div class="kpi-sub">${perf.errors_today === 0 ? 'All clear ✓' : 'Server-side (5xx) errors'}</div>
+    </div>`;
+
+  // Activity line chart
+  const labels = daily.data.map(r => fmtDate(r.date));
+  const totals  = daily.data.map(r => r.total);
+  charts.activity = new Chart(document.getElementById('activityChart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Total calls',
+        data: totals,
+        borderColor: '#059669',
+        backgroundColor: 'rgba(5,150,105,0.08)',
+        fill: true,
+        tension: 0.4,
+        borderWidth: 2.5,
+        pointRadius: 4,
+        pointBackgroundColor: '#059669',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { color: '#94a3b8', font: { size: 11 } } },
+        x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 11 } } }
+      }
+    }
+  });
+
+  // Donut chart
+  const scoredN = ct.scored, analyzeN = ct.analyze, profileN = ct.profile;
+  const total  = ct.total || 1;
+  charts.donut = new Chart(document.getElementById('donutChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Score', 'Analyze', 'Parse'],
+      datasets: [{ data: [scoredN, analyzeN, profileN], backgroundColor: ['#059669','#7c3aed','#0891b2'], borderWidth: 0, hoverOffset: 4 }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '68%',
+      plugins: { legend: { display: false } }
+    }
+  });
+
+  document.getElementById('donut-legend').innerHTML = [
+    ['#059669','Score',scoredN],
+    ['#7c3aed','Analyze',analyzeN],
+    ['#0891b2','Parse',profileN],
+  ].map(([c,l,v]) => `
+    <div class="legend-item">
+      <div class="legend-left"><div class="legend-dot" style="background:${c}"></div>${l}</div>
+      <div class="legend-val">${fmt(v)} <span style="color:var(--ink-3);font-weight:400;font-size:11px">(${Math.round(v/total*100)}%)</span></div>
+    </div>`).join('');
+
+  // Recent errors
+  const errSection = document.getElementById('recent-errors');
+  if (perf.errors_today > 0) {
+    const errLogs = await api('/admin/logs?errors=true&limit=5');
+    errSection.innerHTML = `
+      <div class="errors-section">
+        <div class="errors-hdr">
+          <div class="errors-dot"></div>
+          <div style="font-size:13px;font-weight:700;color:var(--red)">Recent errors (${perf.errors_today} today)</div>
+        </div>
+        <table class="tbl">
+          <thead><tr><th>Time</th><th>Device</th><th>Endpoint</th><th>Status</th><th>Error</th></tr></thead>
+          <tbody>${errLogs.logs.map(l => `
+            <tr>
+              <td class="tbl-dim">${timeAgo(l.created_at)}</td>
+              <td class="tbl-mono">${truncId(l.device_id)}</td>
+              <td>${endpointBadge(l.endpoint)}</td>
+              <td>${statusBadge(l.status)}</td>
+              <td class="error-cell" title="${l.error||''}">${l.error||'—'}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  } else {
+    errSection.innerHTML = '';
+  }
+}
+
+// ── Analytics ──────────────────────────────────────────────────────────────────
+async function renderAnalytics(days) {
+  analyticsDays = days;
+  document.getElementById('analytics-sub').textContent = `Last ${days} days · Score · Analyze · Parse`;
+
+  const [daily, usage] = await Promise.all([
+    api(`/admin/daily?days=${days}`),
+    api(`/admin/usage?days=${days}&limit=10`)
+  ]);
+
+  destroyChart('analyticsChart');
+  destroyChart('analyticsDonut');
+
+  const labels = daily.data.map(r => fmtDate(r.date));
+  charts.analyticsBar = new Chart(document.getElementById('analyticsChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Score',   data: daily.data.map(r=>r.scored),   backgroundColor: '#059669', borderRadius: 3, stack: 'a' },
+        { label: 'Analyze', data: daily.data.map(r=>r.analyze), backgroundColor: '#7c3aed', borderRadius: 3, stack: 'a' },
+        { label: 'Parse',   data: daily.data.map(r=>r.profile), backgroundColor: '#0891b2', borderRadius: 3, stack: 'a' },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'top', labels: { font: { size: 12 }, padding: 16 } } },
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 11 } } },
+        y: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { color: '#94a3b8', font: { size: 11 } } }
+      }
+    }
+  });
+
+  const totScored   = daily.data.reduce((s,r) => s+r.scored,   0);
+  const totAnalyze = daily.data.reduce((s,r) => s+r.analyze, 0);
+  const totProfile = daily.data.reduce((s,r) => s+r.profile, 0);
+  const totAll     = totScored + totAnalyze + totProfile || 1;
+
+  charts.analyticsDonut = new Chart(document.getElementById('analyticsDonut'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Score','Analyze','Parse'],
+      datasets: [{ data: [totScored, totAnalyze, totProfile], backgroundColor: ['#059669','#7c3aed','#0891b2'], borderWidth: 0, hoverOffset: 4 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '68%', plugins: { legend: { display: false } } }
+  });
+
+  document.getElementById('analytics-legend').innerHTML = [
+    ['#059669','Score',totScored],
+    ['#7c3aed','Analyze',totAnalyze],
+    ['#0891b2','Parse',totProfile],
+  ].map(([c,l,v]) => `
+    <div class="legend-item">
+      <div class="legend-left"><div class="legend-dot" style="background:${c}"></div>${l}</div>
+      <div class="legend-val">${fmt(v)} <span style="color:var(--ink-3);font-weight:400;font-size:11px">(${Math.round(v/totAll*100)}%)</span></div>
+    </div>`).join('');
+
+  document.getElementById('top-devices-count').textContent = `${usage.count} devices`;
+  document.getElementById('top-devices-table').innerHTML = usage.devices.length === 0
+    ? `<div class="empty">No data for this period</div>`
+    : `<table class="tbl">
+        <thead><tr><th>Device ID</th><th>Score</th><th>Analyze</th><th>Parse</th><th>Total</th><th>Last active</th></tr></thead>
+        <tbody>${usage.devices.map((d,i) => `
+          <tr>
+            <td>
+              <span style="color:var(--ink-3);font-size:11px;margin-right:4px">#${i+1}</span>
+              <span class="tbl-mono">${truncId(d.device_id)}</span>
+              <button class="copy-btn" onclick="copyId('${d.device_id}')">copy</button>
+            </td>
+            <td>${fmt(d.scored)}</td>
+            <td>${fmt(d.analyze)}</td>
+            <td>${fmt(d.profile)}</td>
+            <td><strong>${fmt(d.total)}</strong></td>
+            <td class="tbl-dim">${fmtDate(d.last_active)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+}
+
+function setPeriod(days, btn) {
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  destroyChart('analyticsChart');
+  destroyChart('analyticsDonut');
+  renderAnalytics(days);
+}
+
+// ── Logs ───────────────────────────────────────────────────────────────────────
+async function fetchAndRenderLogs() {
+  const endpoint   = document.getElementById('log-endpoint')?.value || '';
+  const statusFilt = document.getElementById('log-status')?.value || '';
+  const limit      = document.getElementById('log-limit')?.value || '100';
+  let url = `/admin/logs?limit=${limit}`;
+  if (endpoint)               url += `&endpoint=${encodeURIComponent(endpoint)}`;
+  if (statusFilt === 'errors') url += '&errors=true';
+
+  const data = await api(url);
+  allLogs = data.logs;
+  logsPage = 0;
+  document.getElementById('logs-count').textContent = `${data.count} records`;
+  renderLogsPage();
+}
+
+function renderLogsPage() {
+  const start  = logsPage * LOGS_PER_PAGE;
+  const page   = allLogs.slice(start, start + LOGS_PER_PAGE);
+  const total  = allLogs.length;
+  const pages  = Math.ceil(total / LOGS_PER_PAGE);
+
+  document.getElementById('logs-table').innerHTML = page.length === 0
+    ? `<div class="empty">No logs match these filters</div>`
+    : `<table class="tbl">
+        <thead><tr><th>Time</th><th>Device</th><th>Endpoint</th><th>Latency</th><th>Status</th><th>Error</th></tr></thead>
+        <tbody>${page.map(l => `
+          <tr>
+            <td class="tbl-dim" title="${l.created_at}">${timeAgo(l.created_at)}</td>
+            <td>
+              <span class="tbl-mono">${truncId(l.device_id)}</span>
+              ${l.device_id ? `<button class="copy-btn" onclick="copyId('${l.device_id}')">copy</button>` : ''}
+            </td>
+            <td>${endpointBadge(l.endpoint)}</td>
+            <td class="${l.latency_ms > 3000 ? 'kpi-amber' : ''}" style="font-family:var(--mono);font-size:12px">${fmtMs(l.latency_ms)}</td>
+            <td>${statusBadge(l.status)}</td>
+            <td class="error-cell" title="${l.error||''}">${l.error||''}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+
+  document.getElementById('log-pagination').innerHTML = total > LOGS_PER_PAGE
+    ? `<div class="pagination">
+        <div class="pg-info">Showing ${start+1}–${Math.min(start+LOGS_PER_PAGE,total)} of ${total}</div>
+        <div class="pg-btns">
+          <button class="pg-btn" onclick="changePage(-1)" ${logsPage===0?'disabled':''}>← Previous</button>
+          <button class="pg-btn" onclick="changePage(1)"  ${logsPage>=pages-1?'disabled':''}>Next →</button>
+        </div>
+      </div>` : '';
+}
+
+function changePage(dir) {
+  const pages = Math.ceil(allLogs.length / LOGS_PER_PAGE);
+  logsPage = Math.max(0, Math.min(pages-1, logsPage + dir));
+  renderLogsPage();
+}
+
+// ── Devices ────────────────────────────────────────────────────────────────────
+async function renderDevices() {
+  const [stats, usage] = await Promise.all([
+    api('/admin/stats'),
+    api('/admin/usage?days=30&limit=100')
+  ]);
+
+  document.getElementById('devices-summary').innerHTML = `
+    <div class="summary-card">
+      <div class="summary-val">${fmt(stats.devices.total)}</div>
+      <div class="summary-label">Total devices ever</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-val">${fmt(stats.devices.new_today)}</div>
+      <div class="summary-label">New today</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-val">${fmt(stats.devices.active_today)}</div>
+      <div class="summary-label">Active today</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-val">${fmt(usage.count)}</div>
+      <div class="summary-label">Active last 30 days</div>
+    </div>`;
+
+  document.getElementById('devices-count').textContent = `${usage.count} active in last 30 days`;
+
+  document.getElementById('devices-table').innerHTML = usage.devices.length === 0
+    ? `<div class="empty">No device data yet</div>`
+    : `<table class="tbl">
+        <thead><tr><th>#</th><th>Device ID</th><th>Score calls</th><th>Analyze calls</th><th>Parse calls</th><th>Total</th><th>First active</th><th>Last active</th></tr></thead>
+        <tbody>${usage.devices.map((d,i) => {
+          const isActive = d.last_active === new Date().toISOString().slice(0,10);
+          return `<tr>
+            <td class="tbl-dim">${i+1}</td>
+            <td>
+              <span class="tbl-mono">${truncId(d.device_id)}</span>
+              <button class="copy-btn" onclick="copyId('${d.device_id}')">copy</button>
+              ${isActive ? '<span class="badge badge-green" style="margin-left:6px">active</span>' : ''}
+            </td>
+            <td>${fmt(d.scored)}</td>
+            <td>${fmt(d.analyze)}</td>
+            <td>${fmt(d.profile)}</td>
+            <td><strong>${fmt(d.total)}</strong></td>
+            <td class="tbl-dim">${fmtDate(d.first_active)}</td>
+            <td class="tbl-dim">${fmtDate(d.last_active)}</td>
+          </tr>`;
+        }).join('')}
+        </tbody>
+      </table>`;
+}
+
+// ── Auto-refresh ───────────────────────────────────────────────────────────────
+function startAutoRefresh() {
+  stopAutoRefresh();
+  countdownSecs = 30;
+  updateCountdown();
+  countdownTick = setInterval(() => {
+    countdownSecs--;
+    updateCountdown();
+    if (countdownSecs <= 0) {
+      countdownSecs = 30;
+      renderView(currentView).then(() => showToast('↻ Data refreshed'));
+    }
+  }, 1000);
+}
+
+function stopAutoRefresh() {
+  clearInterval(countdownTick);
+  countdownTick = null;
+}
+
+// ── Auto-refresh toggle ────────────────────────────────────────────────────────
+// Operator can pause when they want to inspect data without it changing under
+// them. State is intentionally per-tab — closing reopens fresh with refresh on.
+let autoRefreshPaused = false;
+function toggleAutoRefresh() {
+  autoRefreshPaused = !autoRefreshPaused;
+  const label = document.getElementById('autoRefreshLabel');
+  const icon  = document.getElementById('autoRefreshIcon');
+  if (autoRefreshPaused) {
+    stopAutoRefresh();
+    if (label) label.textContent = 'Resume';
+    if (icon)  icon.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"/>';
+    const c = document.getElementById('countdown');
+    if (c) c.textContent = 'Auto-refresh paused';
+  } else {
+    if (label) label.textContent = 'Pause';
+    if (icon)  icon.innerHTML = '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>';
+    startAutoRefresh();
+  }
+}
+
+function updateCountdown() {
+  const el = document.getElementById('countdown');
+  if (el) el.textContent = `Refreshes in ${countdownSecs}s`;
+}
+
+function manualRefresh() {
+  countdownSecs = 30;
+  renderView(currentView).then(() => showToast('↻ Refreshed'));
+}
+
+function setLastUpdated() {
+  const el = document.getElementById('last-updated');
+  if (el) el.textContent = 'Updated ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+
+// ── Charts ─────────────────────────────────────────────────────────────────────
+function destroyChart(id) {
+  const key = Object.keys(charts).find(k => charts[k]?.canvas?.id === id);
+  if (key) { charts[key].destroy(); delete charts[key]; }
+}
+
+function destroyCharts() {
+  Object.values(charts).forEach(c => { try { c.destroy(); } catch(_) {} });
+  charts = {};
+}
+
+// ── Utilities ──────────────────────────────────────────────────────────────────
+function copyId(id) {
+  navigator.clipboard.writeText(id).then(() => showToast('Device ID copied'));
+}
+
+function setStatus(ok) {
+  const dot  = document.getElementById('status-dot');
+  const text = document.getElementById('status-text');
+  if (!dot || !text) return;
+  dot.className  = 'sb-dot' + (ok ? '' : ' err');
+  text.textContent = ok ? 'API online' : 'API unreachable';
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ── Icons ──────────────────────────────────────────────────────────────────────
+const icons = {
+  users:    `<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>`,
+  activity: `<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`,
+  chart:    `<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`,
+  clock:    `<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+  alert:    `<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+};
+
+// ── Clear logs ─────────────────────────────────────────────────────────────────
+async function clearAllLogs() {
+  const confirmed = window.confirm(
+    'Clear ALL request logs?\n\nThis deletes every log entry permanently and cannot be undone.'
+  );
+  if (!confirmed) return;
+
+  try {
+    const result = await fetch('/admin/logs', {
+      method:  'DELETE',
+      headers: { 'X-Admin-Secret': secret },
+    }).then(r => r.json());
+
+    showToast(`✓ ${result.message || 'Logs cleared'}`);
+    await fetchAndRenderLogs();
+  } catch (e) {
+    showToast('Failed to clear logs — check server logs');
+  }
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────────
+function init() {
+  // Enter key on login
+  document.getElementById('secret-inp').addEventListener('keydown', e => {
+    if (e.key === 'Enter') tryLogin();
+  });
+
+  // Restore session
+  const stored = sessionStorage.getItem('verdict_admin_secret');
+  if (stored) {
+    secret = stored;
+    // Silently verify it still works
+    fetch('/admin/stats', { headers: { 'X-Admin-Secret': stored } }).then(r => {
+      if (r.ok) {
+        document.getElementById('login').classList.add('hidden');
+        document.getElementById('app').classList.remove('hidden');
+        setStatus(true);
+        navigate('overview');
+        startAutoRefresh();
+      } else {
+        sessionStorage.removeItem('verdict_admin_secret');
+        secret = '';
+      }
+    }).catch(() => { sessionStorage.removeItem('verdict_admin_secret'); secret = ''; });
+  }
+}
+
+init();
+
+// ── Subscriptions view ────────────────────────────────────────────────────────
+async function renderSubscriptions() {
+  const stats = await api('/admin/subscription/stats');
+  const subEnabled = stats.subscriptions_enabled;
+
+  // KPI cards
+  const free       = stats.tier_counts?.free    || 0;
+  const pro        = stats.tier_counts?.pro     || 0;
+  const active     = stats.active_subscribers   || 0;
+  const overrideP  = stats.override_pro         || 0;
+  const cancelled  = stats.status_counts?.cancelled || 0;
+  const mrr        = stats.estimated_mrr        || 0;
+
+  document.getElementById('sub-kpi-cards').innerHTML = `
+    <div class="kpi-card kpi-blue">
+      <div class="kpi-icon">${icons.users}</div>
+      <div class="kpi-value">${fmt(active)}</div>
+      <div class="kpi-label">Active subscribers</div>
+      <div class="kpi-sub">Est. MRR $${fmt(mrr)}/mo</div>
+    </div>
+    <div class="kpi-card kpi-green">
+      <div class="kpi-icon">${icons.chart}</div>
+      <div class="kpi-value">${fmt(pro)}</div>
+      <div class="kpi-label">Pro devices</div>
+      <div class="kpi-sub">${overrideP} admin override${overrideP !== 1 ? 's' : ''}</div>
+    </div>
+    <div class="kpi-card kpi-amber">
+      <div class="kpi-icon">${icons.activity}</div>
+      <div class="kpi-value">${fmt(free)}</div>
+      <div class="kpi-label">Free devices</div>
+      <div class="kpi-sub">${cancelled} cancelled · ${stats.trial_active || 0} in trial</div>
+    </div>
+    <div class="kpi-card ${subEnabled ? 'kpi-green' : 'kpi-red'}">
+      <div class="kpi-icon">${icons.alert}</div>
+      <div class="kpi-value" style="font-size:18px">${subEnabled ? 'Active' : 'Inactive'}</div>
+      <div class="kpi-label">Paywall status</div>
+      <div class="kpi-sub">${subEnabled ? 'Free tier limits enforced' : 'All users get Pro'}</div>
+    </div>
+    <div class="kpi-card kpi-cyan">
+      <div class="kpi-icon">${icons.clock}</div>
+      <div class="kpi-value">${fmt(stats.trial_active || 0)}</div>
+      <div class="kpi-label">In trial</div>
+      <div class="kpi-sub">7-day free trial · full access</div>
+    </div>`;
+
+  // Paywall toggle card
+  document.getElementById('toggleTitle').textContent = subEnabled ? '🔴 Paywall is ON' : '🟢 Paywall is OFF';
+  document.getElementById('toggleDesc').textContent = subEnabled
+    ? 'Free users see upgrade prompts and are limited to 30/3/5 daily calls.'
+    : 'Everyone gets 300/30/20 daily calls regardless of subscription.';
+  const btn = document.getElementById('toggleBtn');
+  if (btn) {
+    btn.textContent = subEnabled ? 'Disable paywall' : 'Enable paywall';
+    btn.style.background = subEnabled ? '#dc2626' : '#16a34a';
+    btn.style.color = '#fff';
+  }
+
+  // Load subscriber devices
+  await renderSubDevices('');
+}
+
+async function renderSubDevices(q) {
+  const url = q ? `/admin/subscription/devices?q=${encodeURIComponent(q)}&limit=30` : '/admin/subscription/devices?limit=30';
+  const data = await api(url);
+  document.getElementById('sub-devices-count').textContent = `${data.count} results`;
+  document.getElementById('sub-devices-table').innerHTML = data.devices.length === 0
+    ? `<div class="empty">No subscriber devices found</div>`
+    : `<table class="tbl">
+        <thead><tr><th>Device</th><th>Email</th><th>Tier</th><th>Status</th><th>Override</th><th>Last seen</th><th>Actions</th></tr></thead>
+        <tbody>${data.devices.map(d => `
+          <tr>
+            <td><span class="tbl-mono">${truncId(d.id)}</span><button class="copy-btn" onclick="copyId('${d.id}')">copy</button></td>
+            <td style="font-size:12px;max-width:150px;overflow:hidden;text-overflow:ellipsis">${d.email || '<span style="color:var(--ink-3)">—</span>'}</td>
+            <td>${d.tier === 'pro' ? '<span class="badge badge-green">Pro</span>' : '<span class="badge badge-gray">Free</span>'}</td>
+            <td>${d.subscription_status ? statusBadge2(d.subscription_status) : '<span class="badge badge-gray">—</span>'}</td>
+            <td>${d.tier_override === 'pro' ? '<span class="badge badge-blue">Override</span>' : '—'}</td>
+            <td class="tbl-dim">${timeAgo(d.last_seen)}</td>
+            <td>
+              ${d.tier_override === 'pro'
+                ? `<button class="pg-btn" onclick="revokeOverride('${d.id}')">Revoke Pro</button>`
+                : `<button class="pg-btn" onclick="grantOverride('${d.id}')">Grant Pro</button>`
+              }
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+}
+
+function statusBadge2(status) {
+  const map = {
+    active:    'badge-green',
+    cancelled: 'badge-amber',
+    past_due:  'badge-amber',
+    expired:   'badge-red',
+  };
+  return `<span class="badge ${map[status] || 'badge-gray'}">${status}</span>`;
+}
+
+let subSearchTimer = null;
+function subSearch(q) {
+  clearTimeout(subSearchTimer);
+  subSearchTimer = setTimeout(() => renderSubDevices(q), 350);
+}
+
+async function toggleSubscriptions() {
+  // Build a specific confirm message based on the current paywall state
+  // so the admin knows exactly what they're about to do.
+  const isCurrentlyOn = document.getElementById('toggleTitle')
+    ?.textContent?.includes('ON');
+ 
+  const action     = isCurrentlyOn ? 'DISABLE' : 'ENABLE';
+  const consequence = isCurrentlyOn
+    ? 'All users will get Pro limits immediately (no paywall).'
+    : 'Free users will be rate-limited immediately (paywall active).';
+ 
+  const confirmed = window.confirm(
+    `${action} the paywall?\n\n${consequence}\n\nAre you sure?`
+  );
+  if (!confirmed) return;
+ 
+  const btn = document.getElementById('toggleBtn');
+  if (btn) btn.disabled = true;
+  try {
+    const result = await fetch('/admin/subscription/toggle', {
+      method: 'POST',
+      headers: { 'X-Admin-Secret': secret }
+    }).then(r => r.json());
+    showToast(result.message || 'Toggled');
+    await renderSubscriptions();
+  } catch(e) {
+    showToast('Toggle failed — check server logs');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function grantOverride(deviceId) {
+  try {
+    await fetch(`/admin/devices/${deviceId}/grant-pro`, {
+      method: 'POST', headers: { 'X-Admin-Secret': secret }
+    });
+    showToast('Pro override granted ✓');
+    await renderSubDevices(document.getElementById('subSearchInp')?.value || '');
+  } catch(e) { showToast('Failed to grant override'); }
+}
+
+async function revokeOverride(deviceId) {
+  try {
+    await fetch(`/admin/devices/${deviceId}/grant-pro`, {
+      method: 'DELETE', headers: { 'X-Admin-Secret': secret }
+    });
+    showToast('Pro override removed ✓');
+    await renderSubDevices(document.getElementById('subSearchInp')?.value || '');
+  } catch(e) { showToast('Failed to revoke override'); }
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// v3 additions — latency chart, webhooks view, CSV export, keyboard
+// shortcuts, hash routing, help modal, paywall pill, API banner, polished
+// empty states.
+// ════════════════════════════════════════════════════════════════════════
+
+// ── Reusable empty-state HTML builder ──────────────────────────────────
+// Replaces the previous "No data" placeholder with something that explains
+// what would normally be here and what to try if it's missing.
+function emptyState(title, desc, iconPath) {
+  const path = iconPath || 'M13 2L3 14h9l-1 8 10-12h-9l1-8z';
+  return `
+    <div class="empty-rich">
+      <div class="empty-icon">
+        <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7">
+          <path d="${path}"/>
+        </svg>
+      </div>
+      <div class="empty-title">${title}</div>
+      <div class="empty-desc">${desc}</div>
+    </div>`;
+}
+
+// ── Latency chart on Analytics view ────────────────────────────────────
+// Pulls from /admin/latency which gives a time-series of avg + max latency
+// for successful (200) requests. Hooks into renderAnalytics so it lives on
+// the same period-selector as the existing call-volume chart.
+async function renderLatencyChart(days) {
+  destroyChart('latencyChart');
+  const subEl = document.getElementById('latency-sub');
+  if (subEl) subEl.textContent = `Last ${days} days · successful requests only`;
+
+  let data;
+  try {
+    data = await api(`/admin/latency?days=${days}`);
+  } catch (e) {
+    return; // api() already toasted the error
+  }
+  const rows = data.data || [];
+  const canvas = document.getElementById('latencyChart');
+  if (!canvas) return;
+  if (rows.length === 0) {
+    // Chart.js doesn't render an empty-state for us; swap the canvas for a placeholder.
+    canvas.style.display = 'none';
+    const parent = canvas.parentElement;
+    let placeholder = parent.querySelector('.empty-rich');
+    if (!placeholder) {
+      parent.insertAdjacentHTML('beforeend', emptyState(
+        'No latency data yet',
+        'Once the API has handled successful requests, this chart will show daily average and peak response times.',
+        'M21 21H4.6a.6.6 0 01-.6-.6V3M7 14l4-4 4 4 6-6'
+      ));
+    }
+    return;
+  }
+  canvas.style.display = '';
+  const placeholder = canvas.parentElement.querySelector('.empty-rich');
+  if (placeholder) placeholder.remove();
+
+  const labels = rows.map(r => fmtDate(r.date));
+  charts.latency = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Avg ms',
+          data: rows.map(r => r.avg_ms),
+          borderColor: '#059669',
+          backgroundColor: 'rgba(5,150,105,0.10)',
+          fill: true,
+          tension: 0.4,
+          borderWidth: 2.5,
+          pointRadius: 3,
+          pointBackgroundColor: '#059669',
+        },
+        {
+          label: 'Max ms',
+          data: rows.map(r => r.max_ms),
+          borderColor: '#d97706',
+          backgroundColor: 'rgba(217,119,6,0.06)',
+          fill: false,
+          tension: 0.4,
+          borderWidth: 2,
+          borderDash: [4, 4],
+          pointRadius: 3,
+          pointBackgroundColor: '#d97706',
+        },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', labels: { font: { size: 12 }, padding: 16 } },
+        tooltip: {
+          callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y} ms` }
+        }
+      },
+      scales: {
+        y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { color: '#94a3b8', font: { size: 11 }, callback: v => v + 'ms' } },
+        x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+// Hook the latency chart into the existing setPeriod / renderAnalytics flow
+// by wrapping their original handlers. This keeps the patch surgical — we
+// don't have to edit the original renderAnalytics function.
+const _origRenderAnalytics = renderAnalytics;
+renderAnalytics = async function(days) {
+  await _origRenderAnalytics(days);
+  await renderLatencyChart(days);
+};
+const _origSetPeriod = setPeriod;
+setPeriod = function(days, btn) {
+  destroyChart('latencyChart');
+  _origSetPeriod(days, btn);
+};
+
+// ── Webhooks view ──────────────────────────────────────────────────────
+async function renderWebhooks() {
+  let data;
+  try {
+    data = await api('/admin/webhooks?limit=30');
+  } catch (e) {
+    return;
+  }
+  const tot = data.totals;
+  const byEvent = data.by_event || [];
+
+  document.getElementById('webhook-kpi-cards').innerHTML = `
+    <div class="kpi-card kpi-blue">
+      <div class="kpi-icon">${icons.activity}</div>
+      <div class="kpi-value">${fmt(tot.today)}</div>
+      <div class="kpi-label">Today</div>
+      <div class="kpi-sub">webhook events received</div>
+    </div>
+    <div class="kpi-card kpi-purple">
+      <div class="kpi-icon">${icons.chart}</div>
+      <div class="kpi-value">${fmt(tot.week)}</div>
+      <div class="kpi-label">Last 7 days</div>
+      <div class="kpi-sub">includes duplicates filtered by event_id</div>
+    </div>
+    <div class="kpi-card kpi-green">
+      <div class="kpi-icon">${icons.users}</div>
+      <div class="kpi-value">${fmt(tot.all_time)}</div>
+      <div class="kpi-label">All time</div>
+      <div class="kpi-sub">${byEvent.length} distinct event types</div>
+    </div>`;
+
+  // Donut chart of event types over last 30 days.
+  destroyChart('webhookDonut');
+  if (byEvent.length > 0) {
+    // Distinct colors per event type — cycle through a small palette.
+    const palette = ['#059669','#7c3aed','#0891b2','#d97706','#dc2626','#475569','#16a34a'];
+    const colors = byEvent.map((_, i) => palette[i % palette.length]);
+    charts.webhookDonut = new Chart(document.getElementById('webhookDonut'), {
+      type: 'doughnut',
+      data: {
+        labels: byEvent.map(e => e.event_name || 'unknown'),
+        datasets: [{ data: byEvent.map(e => e.count), backgroundColor: colors, borderWidth: 0, hoverOffset: 4 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, cutout: '68%', plugins: { legend: { display: false } } }
+    });
+    const total = byEvent.reduce((s, e) => s + e.count, 0) || 1;
+    document.getElementById('webhook-legend').innerHTML = byEvent.map((e, i) => `
+      <div class="legend-item">
+        <div class="legend-left"><div class="legend-dot" style="background:${colors[i]}"></div>${e.event_name || 'unknown'}</div>
+        <div class="legend-val">${fmt(e.count)} <span style="color:var(--ink-3);font-weight:400;font-size:11px">(${Math.round(e.count/total*100)}%)</span></div>
+      </div>`).join('');
+  } else {
+    document.getElementById('webhook-legend').innerHTML = '';
+  }
+
+  // Recent events table.
+  document.getElementById('webhook-count').textContent = `${data.recent.length} most recent`;
+  if (data.recent.length === 0) {
+    document.getElementById('webhook-table').innerHTML = emptyState(
+      'No webhooks received yet',
+      'When LemonSqueezy fires subscription events (creates, cancellations, payment failures), they\'ll appear here. Make sure the webhook URL in your LemonSqueezy dashboard points to /webhook/lemonsqueezy on this server.',
+      'M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71'
+    );
+  } else {
+    document.getElementById('webhook-table').innerHTML = `
+      <table class="tbl">
+        <thead><tr><th>Time</th><th>Provider</th><th>Event</th><th>Event ID</th></tr></thead>
+        <tbody>${data.recent.map(r => `
+          <tr>
+            <td class="tbl-dim" title="${r.received_at}">${timeAgo(r.received_at)}</td>
+            <td>${r.provider || '—'}</td>
+            <td>${r.event_name ? `<span class="badge badge-blue">${r.event_name}</span>` : '<span class="tbl-dim">—</span>'}</td>
+            <td class="tbl-mono">${r.event_id || '—'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+}
+
+// Hook the new view into navigation by extending renderView's dispatch.
+const _origRenderView = renderView;
+renderView = async function(view) {
+  if (view === 'webhooks') {
+    try {
+      await renderWebhooks();
+      setLastUpdated();
+      setStatus(true);
+      hideApiBanner();
+    } catch (e) {
+      console.error('Render error (webhooks):', e);
+      setStatus(false);
+      showApiBanner(e.message || 'Failed to load webhooks');
+    }
+    return;
+  }
+  await _origRenderView(view);
+};
+
+// Add 'webhooks' to the page-title map (navigate() reads from a literal so
+// we re-patch navigate too).
+const _origNavigate = navigate;
+navigate = async function(view) {
+  await _origNavigate(view);
+  if (view === 'webhooks') {
+    document.getElementById('page-title').textContent = 'Webhooks';
+  }
+  // Reflect view in URL hash so reloads preserve location.
+  if (location.hash !== '#' + view) {
+    history.replaceState(null, '', '#' + view);
+  }
+};
+
+// ── CSV export of currently-loaded logs ────────────────────────────────
+// Exports whatever's in `allLogs` (the in-memory cache from fetchAndRenderLogs).
+// Works on the filtered set, not the full table — operator chose the filter,
+// they get what they see.
+function exportLogsCsv() {
+  if (!allLogs || allLogs.length === 0) {
+    showToast('No logs to export — adjust filters and reload');
+    return;
+  }
+  const headers = ['created_at', 'device_id', 'endpoint', 'latency_ms', 'status', 'error'];
+  const csvLines = [headers.join(',')];
+  for (const row of allLogs) {
+    csvLines.push(headers.map(h => csvCell(row[h])).join(','));
+  }
+  const csv = csvLines.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  a.href = url;
+  a.download = `verdict-logs-${ts}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(`Exported ${allLogs.length} log rows`);
+}
+
+// CSV-safe cell: wrap in quotes if it contains comma, quote, or newline,
+// and escape any embedded quotes by doubling them.
+function csvCell(val) {
+  if (val == null) return '';
+  const s = String(val);
+  if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
+// ── Topbar paywall pill ────────────────────────────────────────────────
+// Always-visible reminder of whether the paywall is on or off, so the
+// operator knows the global state without navigating to Subscriptions.
+// Updated whenever any view loads subscription/stats data.
+async function updatePaywallPill() {
+  try {
+    const data = await api('/admin/subscription/stats');
+    const pill  = document.getElementById('topbar-paywall');
+    const label = document.getElementById('topbar-paywall-label');
+    if (!pill || !label) return;
+    pill.style.display = 'inline-flex';
+    if (data.subscriptions_enabled) {
+      pill.className = 'topbar-paywall on';
+      label.textContent = 'Paywall: ON';
+    } else {
+      pill.className = 'topbar-paywall off';
+      label.textContent = 'Paywall: OFF';
+    }
+  } catch (_) {
+    // Silently ignore — the main view error will surface separately
+  }
+}
+
+// Refresh the pill alongside every view load, but throttled to once every
+// 30 seconds so we don't double-call /subscription/stats from Subscriptions view.
+let _pillLastFetch = 0;
+const _origRenderViewForPill = renderView;
+renderView = async function(view) {
+  await _origRenderViewForPill(view);
+  if (Date.now() - _pillLastFetch > 30000) {
+    _pillLastFetch = Date.now();
+    updatePaywallPill();
+  }
+};
+
+// ── API health banner ──────────────────────────────────────────────────
+// Replaces the easy-to-miss sidebar status indicator with a prominent
+// banner across the top of the content area when the API has issues.
+function showApiBanner(msg) {
+  const el = document.getElementById('api-banner');
+  if (!el) return;
+  el.innerHTML = `
+    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    <span>API issue: ${msg}. Will retry automatically on next refresh.</span>`;
+  el.classList.remove('hidden');
+}
+function hideApiBanner() {
+  const el = document.getElementById('api-banner');
+  if (el) el.classList.add('hidden');
+}
+
+// Wrap renderView one more time to hide the banner on success.
+const _origRenderViewForBanner = renderView;
+renderView = async function(view) {
+  try {
+    await _origRenderViewForBanner(view);
+    hideApiBanner();
+  } catch (e) {
+    showApiBanner(e.message || 'unknown error');
+    throw e;
+  }
+};
+
+// ── Help modal ─────────────────────────────────────────────────────────
+function showHelp() {
+  document.getElementById('help-modal').classList.remove('hidden');
+}
+function hideHelp(e) {
+  // If called from an event, only close on outer-overlay click — the inner
+  // card has stopPropagation. If called directly (button), just close.
+  if (e && e.target !== e.currentTarget && !e._fromButton) return;
+  document.getElementById('help-modal').classList.add('hidden');
+}
+
+// ── Keyboard shortcuts ─────────────────────────────────────────────────
+// All shortcuts are single keys (no modifier) and don't fire when the user
+// is typing in an input. The number keys map to nav order; letter keys to
+// actions.
+document.addEventListener('keydown', (e) => {
+  // Don't intercept when typing in inputs.
+  if (e.target.matches('input, textarea, select')) return;
+  // Don't intercept if a modifier is held — leaves browser shortcuts alone.
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+  // Esc closes any open modal.
+  if (e.key === 'Escape') {
+    document.getElementById('help-modal').classList.add('hidden');
+    return;
+  }
+
+  // Don't fire shortcuts while login overlay is showing.
+  if (!document.getElementById('login').classList.contains('hidden')) return;
+
+  const map = {
+    '1': () => navigate('overview'),
+    '2': () => navigate('analytics'),
+    '3': () => navigate('logs'),
+    '4': () => navigate('devices'),
+    '5': () => navigate('subscriptions'),
+    '6': () => navigate('webhooks'),
+    'r': () => manualRefresh(),
+    'R': () => manualRefresh(),
+    'p': () => toggleAutoRefresh(),
+    'P': () => toggleAutoRefresh(),
+    '?': () => showHelp(),
+    '/': () => {
+      // Focus the first visible search input on the current view.
+      const inp = document.querySelector('#view-' + currentView + ' input[type="search"], #view-' + currentView + ' input.filter-sel[placeholder*="ID"], #view-' + currentView + ' #subSearchInp');
+      if (inp) { e.preventDefault(); inp.focus(); }
+    },
+  };
+  const handler = map[e.key];
+  if (handler) { e.preventDefault(); handler(); }
+});
+
+// ── URL hash routing ───────────────────────────────────────────────────
+// Restore the view from `#view` on page load (after login). Reload no longer
+// dumps the operator back to Overview.
+window.addEventListener('hashchange', () => {
+  const view = location.hash.replace(/^#/, '');
+  if (['overview','analytics','logs','devices','subscriptions','webhooks'].includes(view)) {
+    if (view !== currentView) navigate(view);
+  }
+});
+
+// Patch init() to honor the URL hash on first load. We don't replace init()
+// outright — we add a small follow-up that fires after init's auth flow
+// completes.
+const _origInit = init;
+init = function() {
+  _origInit();
+  // After auth flow may have called navigate('overview'), check if the URL
+  // wanted a different view and switch.
+  setTimeout(() => {
+    if (document.getElementById('app').classList.contains('hidden')) return;
+    const wanted = location.hash.replace(/^#/, '');
+    if (wanted && wanted !== 'overview' && ['analytics','logs','devices','subscriptions','webhooks'].includes(wanted)) {
+      navigate(wanted);
+    }
+  }, 50);
+};
+// Re-run since the original already executed.
+if (sessionStorage.getItem('verdict_admin_secret')) {
+  setTimeout(() => {
+    const wanted = location.hash.replace(/^#/, '');
+    if (wanted && ['analytics','logs','devices','subscriptions','webhooks'].includes(wanted)) {
+      navigate(wanted);
+    }
+  }, 100);
+}
+</script>
+</body>
+</html>

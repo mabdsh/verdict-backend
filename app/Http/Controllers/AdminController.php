@@ -484,6 +484,63 @@ final class AdminController
         ]);
     }
 
+    /**
+     * GET /admin/webhooks — LemonSqueezy webhook delivery health.
+     *
+     * Returns aggregate counts (total received, distinct event types) plus
+     * the most-recent N webhooks for the operator dashboard. Useful for
+     * monitoring payment flow — if subscriptions stop coming through, this
+     * view shows whether LS is even talking to us.
+     *
+     * Query: ?limit=N (1-100, default 30)
+     */
+    public function webhooks(Request $request): JsonResponse
+    {
+        $limit = min(max((int) $request->query('limit', 30), 1), 100);
+ 
+        $totalAll = (int) DB::scalar('SELECT COUNT(*) FROM webhook_events');
+ 
+        $today = (int) DB::scalar(
+            "SELECT COUNT(*) FROM webhook_events WHERE date(received_at) = date('now')"
+        );
+ 
+        $thisWeek = (int) DB::scalar(
+            "SELECT COUNT(*) FROM webhook_events WHERE received_at >= ?",
+            [now()->utc()->subDays(6)->toDateString()]
+        );
+ 
+        // Per-event-type counts (last 30 days). Lets the operator see at a
+        // glance which events dominate — usually subscription_updated is
+        // the bulk.
+        $byEvent = DB::select(
+            "SELECT event_name, COUNT(*) as count
+             FROM webhook_events
+             WHERE received_at >= ?
+             GROUP BY event_name
+             ORDER BY count DESC",
+            [now()->utc()->subDays(30)->toDateString()]
+        );
+ 
+        // Most-recent N events with provider + event_name + received_at.
+        $recent = DB::select(
+            "SELECT provider, event_id, event_name, received_at
+             FROM webhook_events
+             ORDER BY received_at DESC
+             LIMIT ?",
+            [$limit]
+        );
+ 
+        return response()->json([
+            'totals' => [
+                'all_time' => $totalAll,
+                'today'    => $today,
+                'week'     => $thisWeek,
+            ],
+            'by_event' => $byEvent,
+            'recent'   => $recent,
+        ]);
+    }
+
     // ────────────────────────────────────────────────────────────────────────
     // Helpers
     // ────────────────────────────────────────────────────────────────────────

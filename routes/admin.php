@@ -31,6 +31,8 @@ Route::get('/stats',    [AdminController::class, 'stats'])    ->name('admin.stat
 Route::get('/daily',    [AdminController::class, 'daily'])    ->name('admin.daily');
 Route::get('/latency',  [AdminController::class, 'latency'])  ->name('admin.latency');
 Route::get('/usage',    [AdminController::class, 'usage'])    ->name('admin.usage');
+Route::get('/webhooks', [AdminController::class, 'webhooks'])->name('admin.webhooks');
+
 
 // ── Request logs ──────────────────────────────────────────────────────────────
 Route::get('/logs',     [AdminController::class, 'logs'])     ->name('admin.logs.index');
