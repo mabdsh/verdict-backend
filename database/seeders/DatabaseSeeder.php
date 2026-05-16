@@ -1,25 +1,36 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Database\Seeders;
 
-use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+
+/*
+|--------------------------------------------------------------------------
+| Top-level database seeder
+|--------------------------------------------------------------------------
+|
+| Runs all the project's seeders. Invoke with:
+|
+|   php artisan db:seed
+|
+| Or run an individual seeder:
+|
+|   php artisan db:seed --class=DefaultSettingsSeeder
+|
+| All seeders here are idempotent (INSERT OR IGNORE) so running twice is
+| safe. This is important because the cutover path (Node → Laravel) may
+| already have the settings populated from the Node backend's
+| seedDefaults() and we don't want to clobber operator changes.
+*/
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        $this->call([
+            DefaultSettingsSeeder::class,
         ]);
     }
 }
