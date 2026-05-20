@@ -42,10 +42,10 @@ final class Limits
     | will be bounded by edge rate limiting (per-IP), not per-device caps.
     */
     public const LIMITS = [
-        'free'  => ['panel' => 3,    'analyze' => 3,    'profile' => 1,    'score' => 500],
-        'trial' => ['panel' => 10,   'analyze' => 10,   'profile' => 3,    'score' => 1500],
-        'pro'   => ['panel' => null, 'analyze' => null, 'profile' => null, 'score' => null],
-    ];
+    'free'  => ['panel' => 3,    'analyze' => 3,    'profile' => null, 'score' => 500],
+    'trial' => ['panel' => 10,   'analyze' => 10,   'profile' => null, 'score' => 1500],
+    'pro'   => ['panel' => null, 'analyze' => null, 'profile' => null, 'score' => null],
+];
 
     /*
     |--------------------------------------------------------------------------
@@ -68,9 +68,9 @@ final class Limits
     | CheckScoreVolumeLimit middleware (P4), which reads from SCORE_LIMITS.
     */
     public const CALL_LIMITS = [
-        'analyze' => ['free' => 3,    'trial' => 10,   'pro' => null],
-        'profile' => ['free' => 1,    'trial' => 3,    'pro' => null],
-    ];
+    'analyze' => ['free' => 3,    'trial' => 10,   'pro' => null],
+    'profile' => ['free' => null, 'trial' => null, 'pro' => null],
+];
 
     /*
     |--------------------------------------------------------------------------
@@ -164,7 +164,7 @@ final class Limits
                 'Unlimited job card scores',
                 '3 detailed panels per day',
                 '3 AI coaching analyses per day',
-                '1 profile parse per day',
+                'Unlimited profile parses',
             ],
         ],
         'trial' => [
@@ -175,7 +175,7 @@ final class Limits
                 'Unlimited job card scores',
                 '10 detailed panels per day',
                 '10 AI coaching analyses per day',
-                '3 profile parses per day',
+                'Unlimited profile parses',
             ],
         ],
         'pro' => [
